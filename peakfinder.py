@@ -261,7 +261,7 @@ def graph(peak, seasons, seas_sum, ppg, apg, rpg):
     fig1 = px.line(df, x='index', y='Peak', markers=True,
                         labels={
                             "index": 'Season',
-                            'Peak': 'Peak Score',
+                            'Peak': 'Score',
                         })
     fig1.update_xaxes(type='category', tickangle=-45)
     exp2.plotly_chart(fig1)
