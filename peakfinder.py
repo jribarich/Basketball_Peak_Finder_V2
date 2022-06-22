@@ -1,5 +1,11 @@
-from telnetlib import SB
-from matplotlib.pyplot import xticks
+"""
+Basketball Peak Finder V2
+Author: Jack Ribarich
+Date: 6/21/2022
+"""
+
+
+import plotly.express as px
 import pandas as pd
 import streamlit as st
 import requests
@@ -122,7 +128,7 @@ def player_data(player_url):
 
 
 def player_tables(url):
-    drop_list = ['Age','Tm', 'Lg', 'Pos', 'G', 'MP']
+    drop_list = ['Age', 'Lg', 'Pos', 'G', 'MP']
 
     per_game = pd.read_html(url, attrs = {"id" : "per_game"})[0]
     adv = pd.read_html(url, attrs = {"id" : "advanced"})[0]
@@ -133,9 +139,12 @@ def player_tables(url):
     adv = adv[adv['Season'].str.contains('-', na=False)]
     adv = adv[pd.to_numeric(adv['G'], errors='coerce').notnull()]
 
-    # Drop duplicate columns then merge
+    # Drop duplicate columns then merge and transform seasons
     per_game.drop(drop_list, axis=1, inplace=True)
-    reg_season = pd.merge(per_game, adv, how='outer', on='Season')
+    reg_season = pd.merge(per_game, adv, how='outer', on=['Season', 'Tm'])
+    
+    reg_season = reg_season[reg_season['Tm'] != 'TOT'] # get rid of seasons where it totals two different teams
+    reg_season['Season'][reg_season.duplicated(subset=['Season'], keep=False)] = reg_season['Season'] + ' (' + reg_season['Tm'] + ')'
 
     #pl is playoffs
     try:
@@ -150,7 +159,7 @@ def player_tables(url):
 
         pl_per_game.drop(drop_list, axis=1, inplace=True)
 
-        playoff = pd.merge(pl_per_game, pl_adv, how='outer', on='Season')
+        playoff = pd.merge(pl_per_game, pl_adv, how='outer', on=['Season', 'Tm'])
 
         return reg_season, playoff
 
@@ -249,13 +258,13 @@ def graph(peak, seasons, seas_sum, ppg, apg, rpg):
     df['Peak'] = seas_sum
     df.reset_index(inplace=True)
 
-    graph1 = alt.Chart(df).mark_line().encode(
-        x=alt.X('index', title='Seasons', axis=alt.Axis(labelAngle=-45)),
-        y=alt.Y('Peak', title='Peak Score'),
-        tooltip=['index', 'Peak'],    
-    )
-
-    exp2.altair_chart(graph1, use_container_width=True)
+    fig1 = px.line(df, x='index', y='Peak', markers=True,
+                        labels={
+                            "index": 'Season',
+                            'Peak': 'Peak Score',
+                        })
+    fig1.update_xaxes(type='category', tickangle=-45)
+    exp2.plotly_chart(fig1)
 
     exp3 = st.expander('Career Chart')
     
@@ -266,14 +275,14 @@ def graph(peak, seasons, seas_sum, ppg, apg, rpg):
 
     data = stats.reset_index().melt('index')
 
-    graph = alt.Chart(data).mark_line().encode(
-    x=alt.X('index', title='Seasons', axis=alt.Axis(labelAngle=-45)),
-    y=alt.Y('value', title='Stats'),
-    color=alt.Color('variable', title='Category'),
-    tooltip=['index', 'value'],    
-    ).interactive()
-
-    exp3.altair_chart(graph, use_container_width=True)
+    fig2 = px.line(data, x='index', y='value', color='variable', markers=True,
+                        labels={
+                            "index": 'Season',
+                            'value': 'Value',
+                            'variable': 'Category'
+                        })
+    fig2.update_xaxes(type='category', tickangle=-45)
+    exp3.plotly_chart(fig2)
 
 
 def display_graphs(peak_data, option):
@@ -337,6 +346,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 # initialize session state variables stored in the browser to speed up computation time
 if 'name' not in st.session_state:
