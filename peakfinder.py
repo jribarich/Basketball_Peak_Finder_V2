@@ -4,7 +4,7 @@ Author: Jack Ribarich
 Date: 6/21/2022
 """
 
-
+import lxml
 import plotly.express as px
 import pandas as pd
 import streamlit as st
